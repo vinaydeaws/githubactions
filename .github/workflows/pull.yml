@@ -1,0 +1,75 @@
+name: Add IP to Security Group
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Get Github action IP
+        id: ip
+        uses: haythem/public-ip@v1.2
+
+      - name: Configure AWS credentials
+        run: |
+          mkdir -p ~/.aws
+          echo "[default]" > ~/.aws/config
+          echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/config
+          echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/config
+          echo "region=us-east-1" >> ~/.aws/config
+         
+
+      - name: Add Git IP to Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id sg-08790f4dbeac08b67 --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+      
+
+      - name: Create SSH key directory and file
+        run: |
+          mkdir -p ~/.ssh
+          touch ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Copy SSH private key
+        run: |
+          echo "${{ secrets.EC2_SSH_PRIVATEKEY_NODE1 }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Add EC2 instance SSH key to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+      
+      
+      
+      
+      #- name: Pull repository to EC2 instance
+        #run: |
+          #ssh -o "StrictHostKeyChecking=no" -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "cd /home/ubuntu/gitLocsl && git clone https://github.com/vinaydeaws/githubactions.git"
+     
+      
+      
+      
+      
+      
+      
+      - name: Pull repository to EC2 instance
+        run: |
+          ssh -o "StrictHostKeyChecking=no" -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "cd /home/ubuntu/gitlocal &&  git reset --hard origin/main && git pull origin main"
+     
+      
+      
+      
+      
+      
+      - name: Remove Port 22 & Git IP from Security Group
+        run: |   
+            aws ec2 revoke-security-group-ingress --group-id sg-08790f4dbeac08b67 --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
