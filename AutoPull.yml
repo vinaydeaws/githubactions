@@ -1,0 +1,61 @@
+name: SSH and SG Configuration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  configure-ssh-and-sg:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH for AWS Account
+        run: |
+          echo "$EC2_SSH_PRIVATEKEY_FUSION" > private_key.pem
+          chmod 600 private_key.pem
+          echo -e "Host aws-server\n  HostName 54.145.123.137\n  User ubuntu\n  IdentityFile private_key.pem" > ~/.ssh/config
+
+      - name: Check SSH Configuration
+        run: ssh -o "StrictHostKeyChecking=no" aws-server exit && echo "SSH configuration successful" || echo "SSH configuration failed"
+
+      - name: Set AWS Credentials
+        run: |
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_ID=$AWS_SECRET_ACCESS_ID" >> $GITHUB_ENV
+
+      - name: Get GitHub IP
+        id: get-github-ip
+        run: echo "::set-output name=ip::$(curl -s https://api.github.com/meta | jq -r '.hooks[]' | sort -u)"
+
+      - name: Add GitHub IP to Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id sg-0e2be84ddffbe525c --protocol tcp --port 22 --cidr ${{ steps.get-github-ip.outputs.ip }}/32
+
+      - name: Check SG Configuration
+        run: |
+          sg_rules=$(aws ec2 describe-security-groups --group-ids sg-0e2be84ddffbe525c | jq -r '.SecurityGroups[].IpPermissions[] | select(.FromPort == 22 and .ToPort == 22) | .IpRanges[].CidrIp')
+          if echo "$sg_rules" | grep -q "${{ steps.get-github-ip.outputs.ip }}/32"; then
+            echo "GitHub IP and port added to SG successfully"
+          else
+            echo "IP and port not added to SG"
+          fi
+
+      - name: Pull Code from QA Branch
+        run: git clone --branch qa https://github.com/digiclave/EDPSSO.git /var/www/testpull
+
+      - name: Check Pull Complete
+        run: ls /var/www/testpull
+
+      - name: Remove GitHub IP from Security Group
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id sg-0e2be84ddffbe525c --protocol tcp --port 22 --cidr ${{ steps.get-github-ip.outputs.ip }}/32
+
+      - name: Check SG Configuration after Removal
+        run: |
+          sg_rules=$(aws ec2 describe-security-groups --group-ids sg-0e2be84ddffbe525c | jq -r '.SecurityGroups[].IpPermissions[] | select(.FromPort == 22 and .ToPort == 22) | .IpRanges[].CidrIp')
+          if [[ -z "$sg_rules" ]]; then
+            echo "IP and port removed from SG"
+          else
+            echo "IP and port not removed from SG"
+          fi
