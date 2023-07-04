@@ -61,9 +61,6 @@ jobs:
       
       
       
-      - name: Pull repository to EC2 instance
-        run: |
-          ssh -o "StrictHostKeyChecking=no" -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "cd /home/ubuntu/gitlocal && git config --global --add safe.directory /home/ubuntu/gitlocal && git fetch && git reset --hard origin/main && git pull origin main"
      
       
       
