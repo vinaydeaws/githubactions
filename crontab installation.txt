@@ -1,0 +1,22 @@
+Step 1: Install the ‘cronie’ package.
+
+#sudo yum install cronie -y
+
+Step 2: Enable the ‘cronie’ service.
+
+#sudo systemctl enable crond.service
+
+Step 3: Start the ‘cronie’ service.
+
+#sudo systemctl start crond.service
+
+The status of the ‘cronie’ service should now reflect as ‘active’:
+
+#sudo systemctl status crond | grep Active
+
+ Active: active (running) since Tue 2023-04-11 16:47:06 UTC; 18s ago
+Hence, you can consider installing ‘cronie’ manually on your instances as it is available in the Amazon Linux 2023 repository. Once installed, you can set up cron jobs as usual.
+
+(Optional) To verify the status of ‘cronie’:
+
+#sudo systemctl status crond.service
