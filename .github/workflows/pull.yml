@@ -60,7 +60,7 @@ jobs:
       
       - name: Pull repository to EC2 instance
         run: |
-          ssh -o "StrictHostKeyChecking=no" -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "cd /home/ubuntu/gitLocal && git clone -b qa https://github.com/vinaydeaws/githubactions.git"
+          ssh -o "StrictHostKeyChecking=no" -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "cd /home/ubuntu/gitlocal && git clone -b qa https://github.com/vinaydeaws/githubactions.git"
 
       
       
